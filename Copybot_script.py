@@ -1,22 +1,38 @@
-
 from eth_utils import from_wei
 from web3 import Web3
+from flask import Flask
+import threading
 import time
 import requests
+import os
 
-# Telegram setup
-bot_token = '7967898034:AAGuTmptiuMkMe9-jlsKuSYZNdEEvQnc0g0'
-chat_id = '6676913889'
+# Flask webserver to keep Replit alive
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
+
+# Load secrets
+bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+chat_id = os.getenv('TELEGRAM_CHAT_ID')
+infura_url = os.getenv('INFURA_URL')
+
+# Connect to Ethereum
+web3 = Web3(Web3.HTTPProvider(infura_url))
 
 def send_telegram(message):
     url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
     data = {"chat_id": chat_id, "text": message}
     response = requests.post(url, data=data)
     print(f"[Telegram] Status: {response.status_code}, Message: {message}")
-
-# Blockchain setup
-infura_url = 'https://mainnet.infura.io/v3/9a6ac04b4430495f8c588c631e7e17d8'
-web3 = Web3(Web3.HTTPProvider(infura_url))
 
 wallets = [
     '0xB80D90fcf2Ed0e4FeBE02d2a209109Bf1F62DF95',
@@ -48,11 +64,13 @@ def check_new_block():
     except Exception as e:
         print(f"[Error] {e}")
 
-# ✅ Confirm bot is alive
 print("[Info] Bot is starting...")
 send_telegram("✅ Bot is running and connected!")
 
-# 🌀 Start monitoring
+# Start Flask server to keep Replit awake
+keep_alive()
+
+# Start monitoring
 while True:
     check_new_block()
     time.sleep(5)
